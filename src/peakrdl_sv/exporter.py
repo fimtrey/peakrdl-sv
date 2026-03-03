@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from enum import Enum
 from importlib.resources import files
 from pathlib import Path
 
@@ -11,6 +12,17 @@ from mako.template import Template
 from systemrdl.node import AddrmapNode, RootNode
 
 from peakrdl_sv.listener import Listener
+
+
+class CpuInterfaceType(Enum):
+    """CPU interface types."""
+
+    CSR = "CSR"
+    AXIL = "AXIL"
+
+    def __str__(self) -> str:
+        """Format the CPU interface type as a human readable string."""
+        return self.name.upper()
 
 
 class VerilogExporterBase:
@@ -49,6 +61,11 @@ class VerilogExporterBase:
 
         self.walk(node)
 
+        args = {
+            "block": self.listener.top_node,
+            "cpuif": str(options.cpuif),
+        }
+
         outpath = Path(options.output)
         if not outpath.exists():
             outpath.mkdir(parents=True, exist_ok=True)
@@ -60,13 +77,13 @@ class VerilogExporterBase:
             text=files("peakrdl_sv").joinpath("reg_top.sv.mako").read_text(),
         )
         with reg_top_path.open("w") as f:
-            f.write(reg_top_tpl.render(block=self.listener.top_node))
+            f.write(reg_top_tpl.render(**args))
 
         reg_pkg_tpl = Template(
             text=files("peakrdl_sv").joinpath("reg_pkg.sv.mako").read_text(),
         )
         with reg_pkg_path.open("w") as f:
-            f.write(reg_pkg_tpl.render(block=self.listener.top_node))
+            f.write(reg_pkg_tpl.render(**args))
 
 
 class PythonExporterBase:
